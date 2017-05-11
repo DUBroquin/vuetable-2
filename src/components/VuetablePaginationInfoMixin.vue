@@ -12,13 +12,13 @@ export default {
     infoTemplate: {
       type: String,
       default() {
-        return "Displaying {from} to {to} of {total} items"
+        return "Affichage de l'élément {from} à {to} sur {total} éléments"
       }
     },
     noDataTemplate: {
       type: String,
       default() {
-        return 'No relevant data'
+        return 'Aucune donnée'
       }
     },
   },
