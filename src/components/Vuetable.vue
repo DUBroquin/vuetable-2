@@ -116,6 +116,10 @@ export default {
       type: Array,
       required: true
     },
+    name: {
+      type: String,
+      required: true
+    },
     loadOnStart: {
       type: Boolean,
       default: true
@@ -146,6 +150,7 @@ export default {
       type: Object,
       default () {
         return {
+          name: 'name',
           sort: 'sort',
           page: 'page',
           perPage: 'per_page'
@@ -432,6 +437,7 @@ export default {
     },
     getAllQueryParams () {
       let params = {}
+      params[this.queryParams.name] = this.name
       params[this.queryParams.sort] = this.getSortParam()
       params[this.queryParams.page] = this.currentPage
       params[this.queryParams.perPage] = this.perPage
