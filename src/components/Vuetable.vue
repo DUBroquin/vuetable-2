@@ -150,7 +150,7 @@ export default {
       type: Object,
       default () {
         return {
-          name: 'name',
+          model: 'model',
           sort: 'sort',
           page: 'page',
           perPage: 'per_page'
@@ -437,7 +437,7 @@ export default {
     },
     getAllQueryParams () {
       let params = {}
-      params[this.queryParams.name] = this.name
+      params[this.queryParams.model] = this.name
       params[this.queryParams.sort] = this.getSortParam()
       params[this.queryParams.page] = this.currentPage
       params[this.queryParams.perPage] = this.perPage
