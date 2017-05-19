@@ -855,6 +855,9 @@ export default {
     'apiUrl': function (newVal, oldVal) {
       if(newVal !== oldVal)
         this.refresh()
+    },
+    'fields': function(){
+        this.normalizeFields();
     }
   },
 }
