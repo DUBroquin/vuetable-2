@@ -858,7 +858,10 @@ export default {
     },
     'fields': function(){
         this.normalizeFields();
-    }
+    },
+    'selectedTo': function(){
+        this.$parent.selected = this.selectedTo
+      }
   },
 }
 </script>
