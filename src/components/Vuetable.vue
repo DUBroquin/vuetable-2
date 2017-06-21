@@ -245,6 +245,7 @@ export default {
   },
   data () {
     return {
+      iAmA:'datatable',
       eventPrefix: 'vuetable:',
       tableFields: [],
       tableData: null,
