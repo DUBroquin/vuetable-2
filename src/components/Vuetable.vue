@@ -1,5 +1,5 @@
 <template>
-  <table :class="['vuetable', css.tableClass]">
+  <table :id="id" :class="['vuetable', css.tableClass]">
     <thead>
       <tr>
         <template v-for="field in tableFields">
@@ -112,6 +112,10 @@ import axios from 'axios'
 
 export default {
   props: {
+    id:{
+      type: String,
+      required: true
+    },
     fields: {
       type: Array,
       required: true
