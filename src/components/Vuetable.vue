@@ -90,7 +90,8 @@
           >
             <transition :name="detailRowTransition">
               <td :colspan="countVisibleFields">
-                <component :is="detailRowComponent" :row-data="item" :row-index="index"></component>
+<!--                 <component :is="detailRowComponent" :row-data="item" :row-index="index"></component>-->
+                <slot name="detail" :row-data="item"></slot>
               </td>
             </transition>
           </tr>
