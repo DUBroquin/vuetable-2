@@ -317,7 +317,7 @@ export default {
     countVisibleFields () {
       return this.tableFields.filter(function(field) {
         return field.visible
-      }).length
+      }).length + this.subColumns.length
     },
     lessThanMinRows: function() {
       if (this.tableData === null || this.tableData.length === 0) {
