@@ -917,6 +917,9 @@ export default {
   .vuetable-overflow{
     overflow:scroll
   }
+  .vuetable th{
+    vertical-align: middle;
+  }
   .vuetable th.sortable:hover {
     color: #2185d0;
     cursor: pointer;
