@@ -7,7 +7,9 @@
           <template v-if="field.visible">
             <template v-if="isSpecialField(field.name)">
               <th v-if="extractName(field.name) == '__checkbox'"
-                  :class="['vuetable-th-checkbox-'+trackBy, field.titleClass]">
+                  :class="['vuetable-th-checkbox-'+trackBy, field.titleClass]"
+                  v-bind:rowspan="field.rowspan" v-bind:colspan="field.colspan"
+                  >
                 <input type="checkbox" @change="toggleAllCheckboxes(field.name, $event)"
                        :checked="checkCheckboxesState(field.name)">
               </th>
@@ -15,28 +17,42 @@
                   @click="orderBy(field, $event)"
                   :class="['vuetable-th-component-'+trackBy, field.titleClass, {'sortable': isSortable(field)}]"
                   v-html="renderTitle(field)"
+                  v-bind:rowspan="field.rowspan" v-bind:colspan="field.colspan"
               ></th>
               <th v-if="extractName(field.name) == '__slot'"
                   @click="orderBy(field, $event)"
                   :class="['vuetable-th-slot-'+extractArgs(field.name), field.titleClass, {'sortable': isSortable(field)}]"
                   v-html="renderTitle(field)"
+                  v-bind:rowspan="field.rowspan" v-bind:colspan="field.colspan"
               ></th>
               <th v-if="apiMode && extractName(field.name) == '__sequence'"
-                  :class="['vuetable-th-sequence', field.titleClass || '']" v-html="renderTitle(field)">
+                  :class="['vuetable-th-sequence', field.titleClass || '']" v-html="renderTitle(field)" v-bind:rowspan="field.rowspan" v-bind:colspan="field.colspan">
               </th>
               <th v-if="notIn(extractName(field.name), ['__sequence', '__checkbox', '__component', '__slot'])"
-                  :class="['vuetable-th-'+field.name, field.titleClass || '']" v-html="renderTitle(field)">
+                  :class="['vuetable-th-'+field.name, field.titleClass || '']" v-html="renderTitle(field)" v-bind:rowspan="field.rowspan" v-bind:colspan="field.colspan">
               </th>
             </template>
             <template v-else>
               <th @click="orderBy(field, $event)"
                   :id="'_' + field.name"
                   :class="['vuetable-th-'+field.name, field.titleClass,  {'sortable': isSortable(field)}]"
-                  v-html="renderTitle(field)"
+                  v-html="renderTitle(field)" v-bind:rowspan="field.rowspan" v-bind:colspan="field.colspan"
               ></th>
             </template>
           </template>
         </template>
+      </tr>
+      <tr v-if="hasComplexHeader">
+          <template v-for="subColumn in subColumns">
+            <th v-if="notIn(extractName(subColumn.name), ['__sequence', '__checkbox', '__component', '__slot'])"
+              :class="['vuetable-th-'+subColumn.name, subColumn.titleClass || '']" v-html="renderTitle(subColumn)" :rowspan="subColumn.rowspan" :colspan="subColumn.colspan"></th>
+            <th v-if="extractName(subColumn.name) == '__slot'"
+                  @click="orderBy(subColumn, $event)"
+                  :class="['vuetable-th-slot-'+extractArgs(subColumn.name), subColumn.titleClass, {'sortable': isSortable(subColumn)}]"
+                  v-html="renderTitle(subColumn)"
+                  :rowspan="subColumn.rowspan" :colspan="subColumn.colspan"
+            ></th>
+          </template>
       </tr>
       </thead>
       <tbody v-cloak class="vuetable-body">
@@ -66,6 +82,13 @@
                         :row-data="item" :row-index="index" :row-field="field.sortField"
                   ></slot>
                 </td>
+                <template v-if="extractName(field.name) === '__parent'">
+                  <td v-for="child in field.children">
+                    <slot :name="child"
+                        :row-data="item" :row-index="index" :row-field="field.sortField"
+                    ></slot>
+                  </td>
+                </template>
               </template>
               <template v-else>
                 <td v-if="hasCallback(field)" :class="field.dataClass"
@@ -91,7 +114,6 @@
           >
             <transition :name="detailRowTransition">
               <td :colspan="countVisibleFields">
-                <!--<component :is="detailRowComponent" :row-data="item" :row-index="index"></component>-->
                 <slot name="detail" :row-data="item"></slot>
               </td>
             </transition>
@@ -122,6 +144,14 @@ export default {
     fields: {
       type: Array,
       required: true
+    },
+    hasComplexHeader:{
+      type: Boolean,
+      default:() => {return false}
+    },
+    subColumns:{
+      type: Array,
+      default:() => {return []}
     },
     name: {
       type: String,
@@ -325,6 +355,9 @@ export default {
             dataClass: '',
             callback: null,
             visible: true,
+            rowspan: 1,
+            colspan:1,
+            children:[]
           }
         } else {
           obj = {
@@ -335,6 +368,9 @@ export default {
             dataClass: (field.dataClass === undefined) ? '' : field.dataClass,
             callback: (field.callback === undefined) ? '' : field.callback,
             visible: (field.visible === undefined) ? true : field.visible,
+            rowspan: (field.rowspan === undefined) ? 1 : field.rowspan,
+            colspan: (field.colspan === undefined) ? 1 : field.colspan,
+            children: (field.children === undefined) ? [] : field.children,
           }
         }
         self.tableFields.push(obj)
