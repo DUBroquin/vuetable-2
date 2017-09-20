@@ -42,7 +42,7 @@
           </template>
         </template>
       </tr>
-      <tr v-if="hasComplexHeader">
+      <tr v-if="subColumns.length > 0">
           <template v-for="subColumn in subColumns">
             <th v-if="notIn(extractName(subColumn.name), ['__sequence', '__checkbox', '__component', '__slot'])"
               :class="['vuetable-th-'+subColumn.name, subColumn.titleClass || '']" v-html="renderTitle(subColumn)" :rowspan="subColumn.rowspan" :colspan="subColumn.colspan"></th>
