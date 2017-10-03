@@ -120,6 +120,11 @@
           </tr>
         </template>
       </template>
+      <template v-if="displayEmptyDataRow">
+        <tr>
+          <td :colspan="countVisibleFields" class="vuetable-empty-result">{{noDataTemplate}}</td>
+        </tr>
+      </template>
       <template v-if="lessThanMinRows">
         <tr v-for="i in blankRows" class="blank-row">
           <template v-for="field in tableFields">
@@ -165,13 +170,34 @@ export default {
         type: String,
         default: ''
     },
+    httpMethod: {
+        type: String,
+        default: 'get',
+        validator: (value) => {
+          return ['get', 'post'].indexOf(value) > -1
+        }
+    },
+    reactiveApiUrl: {
+        type: Boolean,
+        default: true
+    },
     apiMode: {
       type: Boolean,
       default: true
     },
     data: {
-      type: Array,
-      default: function() {
+      type: [Array, Object],
+      default () {
+        return null
+      }
+    },
+    dataTotal: {
+      type: Number,
+      default: 0
+    },
+    dataManager: {
+      type: Function,
+      default () {
         return null
       }
     },
@@ -254,10 +280,6 @@ export default {
       type: String,
       default: 'id'
     },
-    renderIcon: {
-      type: Function,
-      default: null
-    },
     css: {
       type: Object,
       default () {
@@ -278,7 +300,13 @@ export default {
     silent: {
       type: Boolean,
       default: false
-    }
+    },
+    noDataTemplate: {
+      type: String,
+      default() {
+        return 'No Data Available'
+      }
+    },
   },
   data () {
     return {
@@ -292,17 +320,15 @@ export default {
       visibleDetailRows: [],
     }
   },
-  created () {
+  mounted () {
     this.normalizeFields()
+    this.normalizeSortOrder()
     this.$nextTick(function() {
       this.fireEvent('initialized', this.tableFields)
     })
 
-    if (this.apiMode && this.loadOnStart) {
+    if (this.loadOnStart) {
       this.loadData()
-    }
-    if (this.apiMode == false && this.data.length > 0) {
-      this.setData(this.data)
     }
   },
   computed: {
@@ -319,13 +345,22 @@ export default {
         return field.visible
       }).length + this.subColumns.length
     },
-    lessThanMinRows: function() {
+    countTableData () {
+      if (this.tableData === null) {
+        return 0
+      }
+      return this.tableData.length
+    },
+    displayEmptyDataRow () {
+      return this.countTableData === 0 && this.noDataTemplate.length > 0
+    },
+    lessThanMinRows () {
       if (this.tableData === null || this.tableData.length === 0) {
         return true
       }
       return this.tableData.length < this.minRows
     },
-    blankRows: function() {
+    blankRows () {
       if (this.tableData === null || this.tableData.length === 0) {
         return this.minRows
       }
@@ -334,6 +369,12 @@ export default {
       }
 
       return this.minRows - this.tableData.length
+    },
+    isApiMode () {
+      return this.apiMode
+    },
+    isDataMode () {
+      return ! this.apiMode
     }
   },
   methods: {
@@ -378,7 +419,20 @@ export default {
     },
     setData (data) {
       this.apiMode = false
-      this.tableData = data
+      if (Array.isArray(data)) {
+        this.tableData = data
+        return
+      }
+
+      this.fireEvent('loading')
+
+      this.tableData = this.getObjectValue(data, this.dataPath, null)
+      this.tablePagination = this.getObjectValue(data, this.paginationPath, null)
+
+      this.$nextTick(function() {
+        this.fireEvent('pagination-data', this.tablePagination)
+        this.fireEvent('loaded')
+      })
     },
     setTitle (str) {
       if (this.isSpecialField(str)) {
@@ -396,6 +450,11 @@ export default {
       }
 
       return title
+    },
+    renderSequence (index) {
+      return this.tablePagination
+        ? this.tablePagination.from + index
+        : index
     },
     isSpecialField (fieldName) {
       return fieldName.slice(0, 2) === '__'
@@ -415,16 +474,19 @@ export default {
       return arr.indexOf(str) === -1
     },
     loadData (success = this.loadSuccess, failed = this.loadFailed) {
-      if (! this.apiMode) return
+      if (this.isDataMode) {
+        this.callDataManager()
+        return
+      }
 
       this.fireEvent('loading')
 
       this.httpOptions['params'] = this.getAllQueryParams()
 
-      axios.get(this.apiUrl, this.httpOptions).then(
-        success,
-        failed
-      )
+      axios[this.httpMethod](this.apiUrl, this.httpOptions).then(
+          success,
+          failed
+      ).catch(() => failed())
     },
     loadSuccess (response) {
       this.fireEvent('load-success', response)
@@ -545,7 +607,7 @@ export default {
       return this.sortOrder[i].field === field.name && this.sortOrder[i].sortField === field.sortField
     },
     orderBy (field, event) {
-      if ( ! this.isSortable(field) || ! this.apiMode) return
+      if ( ! this.isSortable(field) ) return
 
       let key = this.multiSortKey.toLowerCase() + 'Key'
 
@@ -828,9 +890,42 @@ export default {
       this.tableFields[index].visible = ! this.tableFields[index].visible
     },
     renderIconTag (classes, options = '') {
-      return this.renderIcon === null
+      return typeof(this.css.renderIcon) === 'undefined'
         ? `<i class="${classes.join(' ')}" ${options}></i>`
-        : this.renderIcon(classes, options)
+        : this.css.renderIcon(classes, options)
+    },
+    makePagination (total = null, perPage = null, currentPage = null) {
+      let pagination = {}
+      total = total === null ? this.dataTotal : total
+      perPage = perPage === null ? this.perPage : perPage
+      currentPage = currentPage === null ? this.currentPage : currentPage
+
+      return {
+        'total': total,
+        'per_page': perPage,
+        'current_page': currentPage,
+        'last_page': Math.ceil(total / perPage) || 0,
+        'next_page_url': '',
+        'prev_page_url': '',
+        'from': (currentPage -1) * perPage +1,
+        'to': Math.min(currentPage * perPage, total)
+      }
+    },
+    normalizeSortOrder () {
+      this.sortOrder.forEach(function(item) {
+        item.sortField = item.sortField || item.field
+      })
+    },
+    callDataManager () {
+      if (this.dataManager === null && this.data === null) return
+
+      if (Array.isArray(this.data)) {
+        console.log('data mode: array')
+        this.setData(this.data)
+      } else {
+        this.normalizeSortOrder()
+        this.setData(this.dataManager(this.sortOrder, this.makePagination()))
+      }
     },
     onRowClass (dataItem, index) {
       if (this.rowClassCallback !== '') {
@@ -896,8 +991,8 @@ export default {
         this.loadData();
       }
     },
-    'apiUrl': function (newVal, oldVal) {
-      if(newVal !== oldVal)
+    'apiUrl'  (newVal, oldVal) {
+      if(this.reactiveApiUrl && newVal !== oldVal)
         this.refresh()
     },
     'fields': function(){
@@ -935,5 +1030,8 @@ export default {
   .vuetable-pagination-info {
     margin-top: auto;
     margin-bottom: auto;
+  }
+  .vuetable-empty-result {
+    text-align: center;
   }
 </style>
